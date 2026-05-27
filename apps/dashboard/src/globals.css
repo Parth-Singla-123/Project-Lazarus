@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  color-scheme: dark;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+}
+
+code, pre {
+  font-family: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+::selection {
+  background: rgba(16, 185, 129, 0.28);
+  color: white;
+}

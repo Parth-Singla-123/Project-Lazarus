@@ -1,0 +1,30 @@
+{
+  "name": "lazarus-engine",
+  "version": "1.0.0",
+  "description": "Self-healing UI automation engine with local AI vision",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "example:basic": "ts-node examples/basic.ts",
+    "example:ecommerce": "ts-node examples/ecommerce.ts",
+    "example:e2e": "ts-node -P tsconfig.e2e.json examples/e2e-demo.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "ts-morph": "^20.0.0",
+    "@supabase/supabase-js": "^2.38.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.0",
+    "@types/ws": "^8.18.1",
+    "vitest": "^1.1.0",
+    "@vitest/ui": "^1.1.0",
+    "ts-node": "^10.9.2"
+  }
+}

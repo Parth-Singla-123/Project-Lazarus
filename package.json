@@ -1,0 +1,21 @@
+{
+  "name": "#project-lazarus",
+  "version": "1.0.0",
+  "description": "Self-healing UI automation and testing framework",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "start": "pnpm --filter=dashboard start",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint"
+  },
+  "keywords": [
+    "playwright",
+    "testing",
+    "ui-automation",
+    "self-healing"
+  ],
+  "author": "",
+  "license": "MIT"
+}
