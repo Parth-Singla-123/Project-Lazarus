@@ -25,6 +25,12 @@ export class CodeRewriter {
     newSelector: string
   ): Promise<void> {
     try {
+
+      try {
+        await fs.access(filePath);
+      } catch {
+        throw new Error(`Invalid file path provided to AST: ${filePath}`);
+      } 
       // Add file to project if not already added
       let sourceFile = this.project.getSourceFile(filePath);
       

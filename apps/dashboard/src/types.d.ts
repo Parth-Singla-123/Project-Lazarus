@@ -1,0 +1,10 @@
+// Allow side-effect imports for CSS modules and global CSS in the dashboard
+declare module "*.css";
+declare module "*.scss";
+declare module "*.sass";
+
+declare module "*.svg";
+declare module "*.png";
+declare module "*.jpg";
+declare module "*.jpeg";
+declare module "*.webp";

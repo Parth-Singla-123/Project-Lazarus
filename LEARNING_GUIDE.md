@@ -170,18 +170,18 @@ pnpm --filter=lazarus-engine run example:e2e
 ```
 
 ### Step 4b: Inspect what changed
-After the demo runs, check if the code was actually modified:
+After the demo runs, you can check whether the AST rewriter modified the demo file:
 ```bash
 git diff packages/lazarus-engine/examples/e2e-demo.ts
 ```
 
-**You should see:**
-- A line where `#broken-selector` (or similar) was replaced with `#real-submit-btn`.
-- This proves the AST rewriter actually modified the file.
+**What to expect now:**
+- The E2E demo was changed to *generate a broken selector at runtime* so the healing path is exercised reliably on every run. Because the selector is created dynamically, the AST rewriter usually will *not* find a string literal to replace in the demo file itself and therefore you will often see no diff.
+- If you want to observe an actual file rewrite, run a variant where the broken selector exists as a literal in the source (create a temporary copy of the demo file and insert the broken selector as a string literal), then run the demo against that file. That will show the replacement and a `git diff` entry.
 
-**Reset the file after:**
+**Reset the demo file if you modified it:**
 ```bash
-git checkout packages/lazarus-engine/examples/e2e-demo.ts
+git checkout -- packages/lazarus-engine/examples/e2e-demo.ts
 ```
 
 ---
@@ -501,6 +501,8 @@ If something doesn't work, check:
 - Screenshots are compressed before being sent to the model, which keeps the demo responsive.
 - The AST rewrite step is more resilient because it can use the nearest selector match when line numbers drift.
 - The learning path now matches the real output you should expect when running the demo.
+
+Additional note: the default demo behavior intentionally favors observable healing logs over always rewriting the example file. See the troubleshooting and "Why rewrites sometimes don't happen" sections below for details.
 
 ---
 

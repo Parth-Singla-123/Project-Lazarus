@@ -25,7 +25,7 @@ export class AICaller {
   constructor(config?: OllamaConfig) {
     this.apiUrl = config?.apiUrl || process.env.OLLAMA_API_URL || "http://localhost:11434/api/generate";
     this.model = config?.model || "moondream";
-    this.requestTimeoutMs = config?.requestTimeoutMs || 20000;
+    this.requestTimeoutMs = config?.requestTimeoutMs || 50000;
     this.allowFastMatch = config?.allowFastMatch ?? true;
   }
 
@@ -60,7 +60,7 @@ export class AICaller {
       })
       .join("\n");
 
-    const compressedScreenshot = this.compressDataUrl(screenshotBase64);
+    const compressedScreenshot = this.stripBase64Header(screenshotBase64);
 
     const prompt = `Look at this screenshot of a web page.
 The interactive elements are numbered in red.
@@ -89,7 +89,7 @@ Reply with ONLY one of these:
           keep_alive: "5m",
           options: {
             temperature: 0,
-            num_predict: 8,
+            num_predict: 10,
           },
         }),
       });
@@ -214,7 +214,7 @@ Reply with ONLY one of these:
     return null;
   }
 
-  private compressDataUrl(dataUrl: string): string {
+  private stripBase64Header(dataUrl: string): string {
     if (dataUrl.startsWith("data:image/jpeg;base64,")) {
       return dataUrl.split(",")[1] || dataUrl;
     }

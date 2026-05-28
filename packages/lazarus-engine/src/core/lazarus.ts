@@ -62,6 +62,7 @@ export class Lazarus {
           type: "jpeg",
           quality: 55,
           fullPage: false,
+          scale: "css", 
           animations: "disabled",
         });
         const screenshot = screenshotBuffer.toString("base64");
@@ -99,14 +100,23 @@ export class Lazarus {
         });
         
         // Try clicking with new selector
-        await this.page.click(newSelector);
+        try {
+            await this.page.click(newSelector, { timeout: 3000 });
+        } catch (retryError) {
+            console.error(`[Lazarus] Healed selector ${newSelector} also failed. Aborting.`);
+            throw error; // Throw the original error
+        }
+
+
       } else {
         throw error;
       }
     }
   }
 
-  /**
+ 
+ 
+ /**
    * Parse error stack trace to extract file and line number
    */
   private captureCallSite(): { file: string | null; line: number | null } {
@@ -127,9 +137,7 @@ export class Lazarus {
         const rawFile = callsite.getFileName() || callsite.getScriptNameOrSourceURL();
         const line = callsite.getLineNumber();
 
-        if (!rawFile || !line) {
-          continue;
-        }
+        if (!rawFile || !line) continue;
 
         let file = rawFile;
         if (file.startsWith("file:")) {
@@ -140,10 +148,16 @@ export class Lazarus {
           }
         }
 
+        // BULLETPROOF FILTERING
+        const isNodeInternal = file.startsWith("node:") || file.includes("internal/");
+        const isDependencyFrame = file.includes(`${path.sep}node_modules${path.sep}`);
         const isEngineFrame = file.includes(`${path.sep}packages${path.sep}lazarus-engine${path.sep}src${path.sep}`);
-        const isDependencyFrame = file.includes(`${path.sep}node_modules${path.sep}`) || file.includes("internal/") || file.includes("node:internal");
 
-        if (!isEngineFrame && !isDependencyFrame) {
+        if (!isNodeInternal && !isDependencyFrame && !isEngineFrame) {
+          // Verify the file actually exists on disk before returning it
+          import("fs").then(fs => {
+            if (!fs.existsSync(file)) return null;
+          });
           return { file, line };
         }
       }
@@ -163,9 +177,8 @@ export class Lazarus {
         .replace(/^at\s+/, "")
         .replace(/\)$/, "");
 
-      if (!normalizedLine.includes(`${path.sep}packages${path.sep}lazarus-engine${path.sep}src${path.sep}`)) {
-        continue;
-      }
+      // Ignore standard internals
+      if (normalizedLine.startsWith("node:") || normalizedLine.includes("internal/")) continue;
 
       const match = normalizedLine.match(/^(.*):(\d+):(\d+)$/);
 
@@ -180,10 +193,11 @@ export class Lazarus {
           }
         }
 
+        const isNodeInternal = file.startsWith("node:") || file.includes("internal/");
+        const isDependencyFrame = file.includes(`${path.sep}node_modules${path.sep}`);
         const isEngineFrame = file.includes(`${path.sep}packages${path.sep}lazarus-engine${path.sep}src${path.sep}`);
-        const isDependencyFrame = file.includes(`${path.sep}node_modules${path.sep}`) || file.includes("internal/") || file.includes("node:internal");
 
-        if (!isEngineFrame && !isDependencyFrame) {
+        if (!isNodeInternal && !isDependencyFrame && !isEngineFrame) {
           return { file, line: parseInt(match[2]) };
         }
       }

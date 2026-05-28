@@ -1,6 +1,8 @@
 "use client";
 import React from "react";
-import { ArrowRight, CheckCircle2, ChevronDown, Clock3, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, ExternalLink, ZoomIn, X } from "lucide-react";
+import Badge from "./Badge";
+import CodeDiffViewer from "./CodeDiffViewer";
 import type { HealingEvent } from "../lib/supabase";
 
 export default function HealingDetailModal({
@@ -53,21 +55,31 @@ export default function HealingDetailModal({
           {/* Left: Vision */}
           <div className="border-b border-zinc-800/80 bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.08),_transparent_45%),#09090b] p-4 lg:border-b-0 lg:border-r lg:p-6">
             <div className="flex h-full items-center justify-center rounded-[1.5rem] border border-zinc-800 bg-zinc-950/80 p-4">
-            {event.screenshot_base64 ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={`data:image/png;base64,${event.screenshot_base64}`}
-                alt={event.target_description || "Annotated UI"}
-                className="max-h-[70vh] w-full rounded-2xl border border-zinc-800 object-contain"
-              />
-            ) : (
-              <div className="text-center text-zinc-500">
-                <ChevronDown className="mx-auto mb-3 text-zinc-600" size={20} />
-                <p>No screenshot available</p>
-                <p className="mt-2 text-xs text-zinc-600">Telemetry can still record the selector diff and stack trace.</p>
-              </div>
-            )}
-          </div>
+              {event.screenshot_base64 ? (
+                <div className="group relative w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black/50 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+                  <div className="pointer-events-none absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/70 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-zinc-200 backdrop-blur">
+                    <ZoomIn size={12} />
+                    Hover to inspect
+                  </div>
+                  <div className="pointer-events-none absolute right-4 top-4 z-10 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] uppercase tracking-[0.28em] text-emerald-200 backdrop-blur">
+                    <ExternalLink size={12} />
+                    AI overlay
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`data:image/png;base64,${event.screenshot_base64}`}
+                    alt={event.target_description || "Annotated UI"}
+                    className="max-h-[70vh] w-full origin-center object-contain transition duration-500 ease-out group-hover:scale-[1.08] group-hover:brightness-110"
+                  />
+                </div>
+              ) : (
+                <div className="text-center text-zinc-500">
+                  <Clock3 className="mx-auto mb-3 text-zinc-600" size={20} />
+                  <p>No screenshot available</p>
+                  <p className="mt-2 text-xs text-zinc-600">Telemetry can still record the selector diff and stack trace.</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right: Code Diff + Terminal */}
@@ -77,63 +89,41 @@ export default function HealingDetailModal({
               <InfoCard label="New selector" value={event.new_selector || "(none)"} accent />
             </div>
 
-            <div className="flex-1 overflow-hidden rounded-[1.5rem] border border-zinc-800 bg-zinc-900/70">
-              <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Code diff</p>
-                  <p className="mt-1 text-sm text-zinc-400">The rewrite Lazarus committed to the file.</p>
-                </div>
-                <ArrowRight size={16} className="text-zinc-500" />
-              </div>
-
-              <div className="space-y-4 p-4">
-                <CodeLine tone="removed">{`await lazarus.click("${event.old_selector || ""}")`}</CodeLine>
-                <CodeLine tone="added">{`await lazarus.click("${event.new_selector || ""}")`}</CodeLine>
-              </div>
-
-              <div className="border-t border-zinc-800 p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Error stack trace</p>
-                <pre className="mt-3 max-h-52 overflow-auto rounded-2xl border border-zinc-800 bg-black/70 p-4 text-xs leading-6 text-zinc-400 whitespace-pre-wrap">
-                  {event.error_stack || "No stack trace available."}
-                </pre>
-              </div>
-            </div>
+            <CodeDiffViewer
+              title="Code diff"
+              description="Git-style rewrite preview committed by Lazarus."
+              lines={[
+                {
+                  type: "removed",
+                  oldLineNumber: 1,
+                  content: `await lazarus.click("${event.old_selector || ""}")`,
+                },
+                {
+                  type: "added",
+                  newLineNumber: 2,
+                  content: `await lazarus.click("${event.new_selector || ""}")`,
+                },
+              ]}
+              footer={
+                <>
+                  <div className="mb-3 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Error stack trace</p>
+                      <p className="mt-1 text-sm text-zinc-400">Captured from the failed click and preserved for diagnostics.</p>
+                    </div>
+                    <ArrowRight size={16} className="text-zinc-500" />
+                  </div>
+                  <pre className="max-h-52 overflow-auto rounded-2xl border border-zinc-800 bg-black/70 p-4 text-xs leading-6 whitespace-pre-wrap text-zinc-400">
+                    {event.error_stack || "No stack trace available."}
+                  </pre>
+                </>
+              }
+            />
           </div>
         </div>
       </div>
     </div>
   );
-}
-
-function Badge({
-  children,
-  tone,
-}: {
-  children: React.ReactNode;
-  tone: "neutral" | "success" | "danger";
-}) {
-  const tones = {
-    neutral: "border-zinc-800 bg-zinc-900 text-zinc-200",
-    success: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200",
-    danger: "border-rose-500/20 bg-rose-500/10 text-rose-200",
-  };
-
-  return <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${tones[tone]}`}>{children}</div>;
-}
-
-function CodeLine({
-  children,
-  tone,
-}: {
-  children: React.ReactNode;
-  tone: "removed" | "added";
-}) {
-  const tones = {
-    removed: "border-rose-500/20 bg-rose-500/10 text-rose-200 line-through",
-    added: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200",
-  };
-
-  return <div className={`rounded-2xl border px-4 py-3 font-mono text-sm ${tones[tone]}`}>{children}</div>;
 }
 
 function InfoCard({
