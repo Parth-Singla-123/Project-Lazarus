@@ -10,8 +10,10 @@
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "example:basic": "ts-node examples/basic.ts",
-    "example:ecommerce": "ts-node examples/ecommerce.ts",
-    "example:e2e": "ts-node -P tsconfig.e2e.json examples/e2e-demo.ts"
+    "example:ecommerce_old": "ts-node examples/ecommerce.ts",
+    "example:e2e": "ts-node -P tsconfig.e2e.json examples/e2e-demo.ts",
+    "example:ecommerce": "ts-node -P tsconfig.e2e.json examples/demo-ecommerce.ts",
+    "example:saas": "ts-node -P tsconfig.e2e.json examples/demo-saas.ts"
   },
   "dependencies": {
     "playwright": "^1.40.0",

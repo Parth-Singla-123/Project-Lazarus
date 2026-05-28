@@ -139,12 +139,13 @@ export class Annotator {
           position: fixed;
           left: ${rect.left + 5}px;
           top: ${rect.top + 5}px;
-          background: red;
-          color: white;
-          padding: 2px 6px;
-          border-radius: 3px;
-          font-size: 12px;
-          font-weight: bold;
+          background: #fbbf24; /* Bright Yellow */
+          color: black;        /* Black text for contrast */
+          padding: 4px 8px;
+          border: 2px solid red;
+          border-radius: 4px;
+          font-size: 16px;     /* Larger font */
+          font-weight: 900;
           z-index: 10001;
           pointer-events: none;
         `;

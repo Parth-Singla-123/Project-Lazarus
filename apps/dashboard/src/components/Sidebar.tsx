@@ -14,14 +14,29 @@ export default function Sidebar({ connectionState, total, healed, failed, pendin
   const online = connectionState === "live";
 
   return (
-    <aside className="border-b border-white/5 bg-zinc-950/80 p-6 backdrop-blur-xl lg:w-80 lg:border-b-0 lg:border-r lg:border-white/5">
-      <div className="mb-8 flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 shadow-[0_0_0_1px_rgba(16,185,129,0.06)]">
-          <ShieldCheck size={20} />
+    <aside className="border-b border-white/5 bg-zinc-950/82 p-6 backdrop-blur-xl lg:w-[22rem] lg:border-b-0 lg:border-r lg:border-white/5">
+      <div className="mb-8 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 shadow-[0_0_0_1px_rgba(16,185,129,0.06)]">
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-zinc-500">Project Lazarus</p>
+            <h1 className="font-sans text-xl font-semibold tracking-tight text-white">Observability Plane</h1>
+          </div>
         </div>
-        <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-zinc-500">Project Lazarus</p>
-          <h1 className="font-sans text-xl font-semibold tracking-tight text-white">Healing Command Center</h1>
+
+        <div className="rounded-[1.5rem] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-white shadow-[0_10px_30px_rgba(16,185,129,0.08)]">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            </span>
+            <span className="font-medium">Realtime: {online ? "Connected" : connectionState}</span>
+          </div>
+          <p className="mt-2 text-xs uppercase tracking-[0.24em] text-emerald-200/80">
+            Listening to CI/CD Pipeline
+          </p>
         </div>
       </div>
 

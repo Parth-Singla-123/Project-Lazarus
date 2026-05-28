@@ -25,7 +25,7 @@ export class AICaller {
   constructor(config?: OllamaConfig) {
     this.apiUrl = config?.apiUrl || process.env.OLLAMA_API_URL || "http://localhost:11434/api/generate";
     this.model = config?.model || "moondream";
-    this.requestTimeoutMs = config?.requestTimeoutMs || 50000;
+    this.requestTimeoutMs = config?.requestTimeoutMs || 60000;
     this.allowFastMatch = config?.allowFastMatch ?? true;
   }
 
@@ -62,16 +62,16 @@ export class AICaller {
 
     const compressedScreenshot = this.stripBase64Header(screenshotBase64);
 
-    const prompt = `Look at this screenshot of a web page.
-The interactive elements are numbered in red.
-Target: ${targetDescription}
+    const prompt = `You are an expert UI testing assistant.
+    Look at the provided web page screenshot. The interactive elements are outlined in red boxes with numbers.
 
-Candidates:
-${candidateLines || "(none)"}
+    Target element to find: "${targetDescription}"
 
-Reply with ONLY one of these:
-- a number like 1, 2, 3
-- NOT_FOUND if there is no match`;
+    Here is the exact text and data inside each numbered box:
+    ${candidateLines || "(none)"}
+
+    Task: Based on the image and the data above, which number corresponds to the Target?
+    Reply strictly with ONLY the digit (e.g., 1, 2, or 3). Do not include any other words.`;
 
     try {
       const controller = new AbortController();

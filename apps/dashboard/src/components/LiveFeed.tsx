@@ -7,9 +7,9 @@ import Badge from "./Badge";
 import { cn } from "../lib/cn";
 import type { HealingEvent } from "../lib/supabase";
 
-type HealingFeedProps = {
+type LiveFeedProps = {
   events: HealingEvent[];
-  allEventsCount: number;
+  totalCount: number;
   query: string;
   onQueryChange: (value: string) => void;
   onSelect: (event: HealingEvent) => void;
@@ -77,12 +77,12 @@ function FeedSkeleton() {
 }
 
 function EmptyState({ query, hasEvents }: { query: string; hasEvents: boolean }) {
-  const title = query.trim() ? "No matching events" : hasEvents ? "Nothing to show" : "No healing events yet";
+  const title = query.trim() ? "No matching events" : hasEvents ? "Nothing to show" : "No events yet";
   const description = query.trim()
     ? "Try a broader search or clear the filter to reveal the feed."
     : hasEvents
       ? "The feed exists, but the current view has no rows to render."
-      : "Run the E2E demo to generate the first healing event and watch the stream light up.";
+      : "Run the CI/CD pipeline and watch new healing events stream in live.";
 
   const icons: Array<{ icon: LucideIcon; className: string }> = [
     { icon: ShieldAlert, className: "text-rose-300" },
@@ -92,8 +92,8 @@ function EmptyState({ query, hasEvents }: { query: string; hasEvents: boolean })
 
   return (
     <div className="px-5 py-16 sm:px-6">
-      <div className="mx-auto max-w-2xl rounded-[2rem] border border-dashed border-zinc-800/90 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.08),_transparent_45%),linear-gradient(180deg,rgba(9,9,11,0.88),rgba(9,9,11,0.7))] p-8 text-center shadow-[0_24px_90px_rgba(0,0,0,0.3)]">
-        <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-zinc-800 bg-zinc-900/80 px-4 py-2">
+      <div className="mx-auto max-w-2xl rounded-[2rem] border border-dashed border-white/10 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.08),_transparent_45%),linear-gradient(180deg,rgba(9,9,11,0.88),rgba(9,9,11,0.72))] p-8 text-center shadow-[0_24px_90px_rgba(0,0,0,0.3)]">
+        <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-white/5 bg-zinc-900/80 px-4 py-2">
           {icons.map(({ icon: Icon, className }, index) => (
             <div key={index} className={cn("flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5", className)}>
               <Icon size={14} />
@@ -114,30 +114,32 @@ function EmptyState({ query, hasEvents }: { query: string; hasEvents: boolean })
   );
 }
 
-export default function HealingFeed({ events, allEventsCount, query, onQueryChange, onSelect, loading = false }: HealingFeedProps) {
+export default function LiveFeed({ events, totalCount, query, onQueryChange, onSelect, loading = false }: LiveFeedProps) {
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-white/5 bg-zinc-950/60 shadow-[0_32px_120px_rgba(0,0,0,0.35)]">
-      <div className="border-b border-white/5 px-5 py-4 sm:px-6">
+    <section className="overflow-hidden rounded-[2rem] border border-white/5 bg-zinc-950/60 shadow-[0_32px_120px_rgba(0,0,0,0.35)] backdrop-blur">
+      <div className="border-b border-white/5 px-5 py-5 sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.28em] text-emerald-300">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              Realtime healing feed
+              Live CI/CD pipeline
             </div>
-            <h3 className="mt-3 text-xl font-semibold tracking-tight text-white sm:text-2xl">Healing events</h3>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Monitor the newest heals first, inspect the screenshot, and review the source rewrite from the same surface.
-            </p>
+            <div>
+              <h3 className="text-2xl font-semibold tracking-tight text-white">Event stream</h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                Watch healing events arrive from Supabase WebSockets, then inspect the selector change and screenshot on demand.
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.22em] text-zinc-500">
-            <span className="rounded-full border border-zinc-800 bg-zinc-900/70 px-3 py-1">{events.length} visible</span>
-            <span className="rounded-full border border-zinc-800 bg-zinc-900/70 px-3 py-1">{allEventsCount} total</span>
+            <span className="rounded-full border border-white/5 bg-zinc-900/70 px-3 py-1">{events.length} visible</span>
+            <span className="rounded-full border border-white/5 bg-zinc-900/70 px-3 py-1">{totalCount} total</span>
           </div>
         </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-          <label className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-sm text-zinc-300 focus-within:border-emerald-500/40">
+          <label className="flex items-center gap-3 rounded-2xl border border-white/5 bg-zinc-900/80 px-4 py-3 text-sm text-zinc-300 focus-within:border-emerald-500/40">
             <Search size={16} className="shrink-0 text-zinc-500" />
             <input
               value={query}
@@ -147,7 +149,7 @@ export default function HealingFeed({ events, allEventsCount, query, onQueryChan
             />
           </label>
 
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/70 px-4 py-3 text-sm text-zinc-400">
+          <div className="inline-flex items-center gap-2 rounded-2xl border border-white/5 bg-zinc-900/70 px-4 py-3 text-sm text-zinc-400">
             <Filter size={14} />
             <span>Playwright → AI → AST → Supabase</span>
           </div>
@@ -157,9 +159,9 @@ export default function HealingFeed({ events, allEventsCount, query, onQueryChan
       {loading ? (
         <FeedSkeleton />
       ) : events.length === 0 ? (
-        <EmptyState query={query} hasEvents={allEventsCount > 0} />
+        <EmptyState query={query} hasEvents={totalCount > 0} />
       ) : (
-        <div className="divide-y divide-zinc-800/80">
+        <div className="divide-y divide-white/5">
           <AnimatePresence initial={false}>
             {events.map((event) => {
               const tone = statusTone(event.status);
@@ -169,12 +171,12 @@ export default function HealingFeed({ events, allEventsCount, query, onQueryChan
                 <motion.button
                   key={event.id}
                   layout
-                  initial={{ opacity: 0, y: -12, height: 0 }}
-                  animate={{ opacity: 1, y: 0, height: "auto" }}
-                  exit={{ opacity: 0, y: -8, height: 0 }}
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
                   transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => onSelect(event)}
-                  className="group w-full overflow-hidden border-0 px-5 py-5 text-left transition-colors hover:bg-zinc-900/50 sm:px-6"
+                  className="group w-full overflow-hidden border-0 px-5 py-5 text-left transition-colors hover:bg-white/[0.03] sm:px-6"
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div className="space-y-3">
@@ -187,21 +189,21 @@ export default function HealingFeed({ events, allEventsCount, query, onQueryChan
                         </span>
                       </div>
 
-                      <div>
+                      <div className="space-y-2">
                         <h4 className="text-base font-medium text-white transition-colors group-hover:text-emerald-300">
                           {event.target_description || "(no description)"}
                         </h4>
-                        <p className="mt-1 max-w-3xl font-mono text-sm text-zinc-400">
+                        <p className="max-w-3xl font-mono text-sm text-zinc-400">
                           {event.old_selector || "unknown selector"} <span className="text-zinc-600">→</span> {event.new_selector || "pending"}
                         </p>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-zinc-500">
+                          <span className="rounded-full border border-white/5 bg-zinc-900/70 px-2.5 py-1">{event.script_id || "unknown script"}</span>
+                          <span className="rounded-full border border-white/5 bg-zinc-900/70 px-2.5 py-1">{formatRelativeTime(event.created_at)}</span>
+                        </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 text-sm text-zinc-500 md:text-right">
-                      <div className="hidden flex-col items-end gap-1 sm:flex">
-                        <span className="text-zinc-300">{formatRelativeTime(event.created_at)}</span>
-                        <span className="text-xs uppercase tracking-[0.2em] text-zinc-600">updated</span>
-                      </div>
                       <ArrowUpRight size={16} className="text-zinc-600 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-zinc-300" />
                     </div>
                   </div>
