@@ -58,10 +58,13 @@ async function main() {
     const lazarus = new Lazarus(page, {
       ollama: { 
         apiUrl: "http://localhost:11434/api/generate", // CHANGED: Connect to real local Ollama
-        model: "moondream", 
+        model: "llava", 
         allowFastMatch: false // CHANGED: Force it to use the Vision AI, not text heuristics
       },
-      scriptId: "22222222-2222-2222-2222-222222222222",
+      scriptId: "demo-e2e-vision",
+      projectName: "Lazarus E2E Vision Demo",
+      scriptName: "Real Vision Healing Demo",
+      scriptFilePath: "packages/lazarus-engine/examples/e2e-demo.ts",
       supabase: env.NEXT_PUBLIC_SUPABASE_URL ? {
         url: env.NEXT_PUBLIC_SUPABASE_URL,
         anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

@@ -4,10 +4,33 @@
  */
 import { chromium } from "playwright";
 import { Lazarus } from "../src/index";
+import * as fs from "fs";
+import * as path from "path";
+
+function loadDashboardEnv(): Record<string, string> {
+  const envPath = path.resolve(__dirname, "../../../apps/dashboard/.env.local");
+  try {
+    const content = fs.readFileSync(envPath, "utf8");
+    const env: Record<string, string> = {};
+    for (const line of content.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const equalsIndex = trimmed.indexOf("=");
+      if (equalsIndex === -1) continue;
+      env[trimmed.slice(0, equalsIndex).trim()] = trimmed.slice(equalsIndex + 1).trim();
+    }
+    return env;
+  } catch (e) {
+    console.warn("[E2E] Could not load .env.local, telemetry might fail.");
+    return {};
+  }
+}
+
 
 async function main() {
   console.log("🚀 [Demo 2] Starting SaaS Settings Flow...");
   const browser = await chromium.launch({ headless: false, slowMo: 500 });
+  const env = loadDashboardEnv();
   const page = await browser.newPage();
 
   await page.setContent(`
@@ -71,15 +94,22 @@ async function main() {
   `);
 
   const lazarus = new Lazarus(page, {
-    ollama: { apiUrl: "http://localhost:11434/api/generate", model: "moondream", allowFastMatch: false },
+    ollama: { apiUrl: "http://localhost:11434/api/generate", model: "llava", allowFastMatch: false },
     scriptId: "demo-saas-settings",
+    projectName: "DataDog Clone SaaS Settings Demo",
+    scriptName: "SaaS Settings Flow",
+    scriptFilePath: "packages/lazarus-engine/examples/demo-saas.ts",
+    supabase: env.NEXT_PUBLIC_SUPABASE_URL ? {
+      url: env.NEXT_PUBLIC_SUPABASE_URL,
+      anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    } : undefined,
     enableTelemetry: true,
   });
 
   console.log("🚨 Attempting to click legacy delete button...");
   
   // The Broken Script
-  await lazarus.click("Delete Organization Button", ".danger-btn");
+  await lazarus.click("Delete Organization Button", "#legacy-delete-org-123");
 
   await page.waitForTimeout(4000);
   await browser.close();

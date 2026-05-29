@@ -17,6 +17,10 @@ export interface LazyHealingOptions {
     anonKey?: string;
   };
   scriptId?: string;
+  projectId?: string;
+  projectName?: string;
+  scriptName?: string;
+  scriptFilePath?: string;
   enableTelemetry?: boolean;
 }
 
@@ -38,7 +42,14 @@ export class Lazarus {
     this.annotator = new Annotator(page);
     this.aiCaller = new AICaller(options.ollama);
     this.rewriter = new CodeRewriter();
-    this.telemetry = new TelemetryLogger(options.supabase);
+    this.telemetry = new TelemetryLogger({
+      ...options.supabase,
+      projectId: options.projectId,
+      projectName: options.projectName,
+      scriptId: options.scriptId,
+      scriptName: options.scriptName,
+      scriptFilePath: options.scriptFilePath,
+    });
   }
 
   /**
@@ -60,9 +71,8 @@ export class Lazarus {
         // Take screenshot and convert to base64
         const screenshotBuffer = await this.page.screenshot({
           type: "jpeg",
-          quality: 55,
+          quality: 80,
           fullPage: false,
-          scale: "css", 
           animations: "disabled",
         });
         const screenshot = screenshotBuffer.toString("base64");

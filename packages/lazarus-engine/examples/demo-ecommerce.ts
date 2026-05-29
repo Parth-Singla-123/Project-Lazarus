@@ -4,9 +4,32 @@
  */
 import { chromium } from "playwright";
 import { Lazarus } from "../src/index";
+import * as fs from "fs";
+import * as path from "path";
+
+function loadDashboardEnv(): Record<string, string> {
+  const envPath = path.resolve(__dirname, "../../../apps/dashboard/.env.local");
+  try {
+    const content = fs.readFileSync(envPath, "utf8");
+    const env: Record<string, string> = {};
+    for (const line of content.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const equalsIndex = trimmed.indexOf("=");
+      if (equalsIndex === -1) continue;
+      env[trimmed.slice(0, equalsIndex).trim()] = trimmed.slice(equalsIndex + 1).trim();
+    }
+    return env;
+  } catch (e) {
+    console.warn("[E2E] Could not load .env.local, telemetry might fail.");
+    return {};
+  }
+}
+
 
 async function main() {
   console.log("🚀 [Demo 1] Starting E-Commerce Checkout Flow...");
+  const env = loadDashboardEnv();
   
   // Headless: false so the audience can watch the magic happen
   const browser = await chromium.launch({ headless: false, slowMo: 500 }); 
@@ -80,8 +103,15 @@ async function main() {
 
   // 2. Initialize Lazarus strictly for REAL AI Vision
   const lazarus = new Lazarus(page, {
-    ollama: { apiUrl: "http://localhost:11434/api/generate", model: "moondream", allowFastMatch: false },
+    ollama: { apiUrl: "http://localhost:11434/api/generate", model: "llava", allowFastMatch: false },
     scriptId: "demo-ecommerce-checkout",
+    projectName: "TechStore Pro Checkout Demo",
+    scriptName: "E-Commerce Checkout Flow",
+    scriptFilePath: "packages/lazarus-engine/examples/demo-ecommerce.ts",
+    supabase: env.NEXT_PUBLIC_SUPABASE_URL ? {
+      url: env.NEXT_PUBLIC_SUPABASE_URL,
+      anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    } : undefined,
     enableTelemetry: true,
   });
 

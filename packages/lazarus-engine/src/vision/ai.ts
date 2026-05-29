@@ -16,62 +16,59 @@ export interface AnnotatedElement {
   role: string;
 }
 
+
 export class AICaller {
   private apiUrl: string;
-  private model: string = "moondream";
+  private model: string;
   private requestTimeoutMs: number;
   private allowFastMatch: boolean;
 
   constructor(config?: OllamaConfig) {
     this.apiUrl = config?.apiUrl || process.env.OLLAMA_API_URL || "http://localhost:11434/api/generate";
-    this.model = config?.model || "moondream";
+    // UPGRADE: Default to LLaVA instead of moondream
+    this.model = config?.model || "llava"; 
     this.requestTimeoutMs = config?.requestTimeoutMs || 60000;
     this.allowFastMatch = config?.allowFastMatch ?? true;
   }
 
-  /**
-   * Send screenshot to Moondream and get the element number
-   */
   async identifyElement(
     targetDescription: string,
     selectorMap: Map<number, string>,
     metadataMap: Map<number, AnnotatedElement>,
     screenshotBase64: string
   ): Promise<string> {
-    const fastMatch = this.allowFastMatch
-      ? this.findFastMatch(targetDescription, selectorMap, metadataMap)
-      : null;
-
-    if (fastMatch) {
-      console.log(`[Lazarus AI] Fast match: ${targetDescription} -> ${fastMatch}`);
-      return fastMatch;
+    
+    if (this.allowFastMatch) {
+      const fastMatch = this.findFastMatch(targetDescription, selectorMap, metadataMap);
+      if (fastMatch) {
+        console.log(`[Lazarus AI] Fast match: ${targetDescription} -> ${fastMatch}`);
+        return fastMatch;
+      }
     }
 
+    // 1. Build the DOM Context so the AI isn't blind
     const candidateLines = Array.from(selectorMap.entries())
-      .slice(0, 8)
+      .slice(0, 15) // Get up to 15 elements
       .map(([number, selector]) => {
         const metadata = metadataMap.get(number);
         const label = metadata
-          ? [metadata.tagName, metadata.text, metadata.ariaLabel, metadata.role]
-              .filter(Boolean)
-              .join(" | ")
+          ? [metadata.tagName, metadata.text, metadata.ariaLabel, metadata.role].filter(Boolean).join(" | ")
           : selector;
-        return `${number}: ${label}`;
+        return `Box ${number}: ${label}`;
       })
       .join("\n");
 
     const compressedScreenshot = this.stripBase64Header(screenshotBase64);
 
-    const prompt = `You are an expert UI testing assistant.
-    Look at the provided web page screenshot. The interactive elements are outlined in red boxes with numbers.
+    // 2. The Bulletproof Prompt (Forcing the [X] bracket format)
+    const prompt = `You are a QA automation agent.
+Target element to find: "${targetDescription}"
 
-    Target element to find: "${targetDescription}"
+Here is the data for the red boxes in the image:
+${candidateLines}
 
-    Here is the exact text and data inside each numbered box:
-    ${candidateLines || "(none)"}
-
-    Task: Based on the image and the data above, which number corresponds to the Target?
-    Reply strictly with ONLY the digit (e.g., 1, 2, or 3). Do not include any other words.`;
+Look at the image and the data above. Which Box number is the Target?
+You MUST wrap your final answer in brackets. For example, if the answer is box 4, reply ONLY with: [4]`;
 
     try {
       const controller = new AbortController();
@@ -89,109 +86,65 @@ export class AICaller {
           keep_alive: "5m",
           options: {
             temperature: 0,
-            num_predict: 10,
+            num_predict: 50, // Let it talk if it needs to
           },
         }),
       });
 
       clearTimeout(timeout);
 
-      if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Ollama API error: ${response.status}`);
 
       const data = await response.json() as { response?: string };
       const rawResponse = (data.response || "").trim();
-      console.log(`[Lazarus AI] Raw response: ${rawResponse || "<empty>"}`);
+      console.log(`[Lazarus AI] Raw response from ${this.model}: ${rawResponse}`);
 
-      const numberMatch = rawResponse.match(/\d+/);
-      const wordToNumber: Record<string, number> = {
-        one: 1,
-        two: 2,
-        three: 3,
-        four: 4,
-        five: 5,
-        six: 6,
-        seven: 7,
-        eight: 8,
-        nine: 9,
-        ten: 10,
-      };
-
-      const wordMatch = Object.entries(wordToNumber).find(([word]) =>
-        new RegExp(`\\b${word}\\b`, "i").test(rawResponse)
-      );
-
-      if (!numberMatch && !wordMatch) {
-        if (selectorMap.size === 1) {
-          const onlySelector = selectorMap.values().next().value as string | undefined;
-          if (onlySelector) {
-            console.warn(
-              `[Lazarus AI] Empty or unusable response; falling back to the only available selector: ${onlySelector}`
-            );
-            return onlySelector;
-          }
+      // 3. SAFE EXTRACTION: Look SPECIFICALLY for a number inside brackets like [4]
+      const bracketMatch = rawResponse.match(/\[(\d+)\]/);
+      
+      if (bracketMatch && bracketMatch[1]) {
+        const elementNumber = parseInt(bracketMatch[1], 10);
+        const selector = selectorMap.get(elementNumber);
+        
+        if (selector) {
+          console.log(`[Lazarus AI] Found element: ${targetDescription} -> ${selector}`);
+          return selector;
         }
-
-        const targetWords = targetDescription.toLowerCase().split(/\s+/).filter(Boolean);
-        const scoredCandidates = Array.from(metadataMap.entries()).map(([number, metadata]) => {
-          const haystack = `${metadata.text} ${metadata.ariaLabel} ${metadata.role} ${metadata.tagName}`.toLowerCase();
-          let score = 0;
-
-          for (const word of targetWords) {
-            if (word.length <= 2) continue;
-            if (haystack.includes(word)) score += 2;
-            if (metadata.tagName.toLowerCase() === word) score += 3;
-            if (metadata.role.toLowerCase() === word) score += 2;
-            if (metadata.text.toLowerCase() === word) score += 3;
-          }
-
-          return { number, metadata, score };
-        });
-
-        const heuristicMatch = scoredCandidates.sort((left, right) => right.score - left.score)[0];
-
-        if (heuristicMatch && heuristicMatch.score > 0) {
-          const { number, metadata } = heuristicMatch;
-          console.warn(
-            `[Lazarus AI] Falling back to heuristic match: ${number} -> ${metadata.selector}`
-          );
-          return metadata.selector;
-        }
-
-        throw new Error("AI could not identify the element");
       }
 
-      const elementNumber = numberMatch
-        ? parseInt(numberMatch[0])
-        : wordMatch
-          ? wordToNumber[wordMatch[0].toLowerCase()]
-          : NaN;
-      const selector = selectorMap.get(elementNumber);
-
-      if (!selector) {
-        throw new Error(`No selector found for element #${elementNumber}`);
+      // If LLaVA forgot the brackets, try to find ANY valid number as a last resort
+      const fallbackNumbers = rawResponse.match(/\d+/g);
+      if (fallbackNumbers) {
+        // Reverse the array to get the LAST number it said (usually the final answer)
+        for (const numStr of fallbackNumbers.reverse()) {
+          const elementNumber = parseInt(numStr, 10);
+          const selector = selectorMap.get(elementNumber);
+          if (selector) {
+            console.log(`[Lazarus AI] Extracted fallback number ${elementNumber} -> ${selector}`);
+            return selector;
+          }
+        }
       }
 
-      console.log(`[Lazarus AI] Found element: ${targetDescription} -> ${selector}`);
-      return selector;
+      console.warn(`[Lazarus AI] AI returned invalid response. Falling back to heuristic.`);
+      const heuristicMatch = this.findFallbackMatch(targetDescription, metadataMap);
+      if (heuristicMatch) return heuristicMatch;
+
+      throw new Error("AI could not identify a valid element number.");
     } catch (error) {
       console.error("[Lazarus AI] Error:", error);
       throw error;
     }
   }
 
-  private findFastMatch(
-    targetDescription: string,
-    selectorMap: Map<number, string>,
-    metadataMap: Map<number, AnnotatedElement>
-  ): string | null {
-    if (selectorMap.size === 1) {
-      return selectorMap.values().next().value || null;
+  // Same fast match as before
+  private findFastMatch(target: string, sMap: Map<number, string>, mMap: Map<number, AnnotatedElement>): string | null {
+    if (sMap.size === 1) {
+    return sMap.values().next().value || null;
     }
 
-    const targetWords = targetDescription.toLowerCase().split(/\s+/).filter(Boolean);
-    const scoredCandidates = Array.from(metadataMap.entries()).map(([number, metadata]) => {
+    const targetWords = target.toLowerCase().split(/\s+/).filter(Boolean);
+    const scoredCandidates = Array.from(mMap.entries()).map(([number, metadata]) => {
       const haystack = `${metadata.text} ${metadata.ariaLabel} ${metadata.role} ${metadata.tagName}`.toLowerCase();
       let score = 0;
 
@@ -210,16 +163,30 @@ export class AICaller {
     if (topCandidate && topCandidate.score >= 4) {
       return topCandidate.metadata.selector;
     }
+    return null; 
+  }
 
+  // Separated fallback logic for cleaner code
+  private findFallbackMatch(targetDescription: string, metadataMap: Map<number, AnnotatedElement>): string | null {
+    const targetWords = targetDescription.toLowerCase().split(/\s+/).filter(Boolean);
+    const scoredCandidates = Array.from(metadataMap.entries()).map(([number, metadata]) => {
+      const haystack = `${metadata.text} ${metadata.ariaLabel} ${metadata.role} ${metadata.tagName}`.toLowerCase();
+      let score = 0;
+      for (const word of targetWords) {
+        if (word.length <= 2) continue;
+        if (haystack.includes(word)) score += 2;
+        if (metadata.text.toLowerCase() === word) score += 3;
+      }
+      return { number, metadata, score };
+    });
+
+    const best = scoredCandidates.sort((a, b) => b.score - a.score)[0];
+    if (best && best.score > 0) return best.metadata.selector;
     return null;
   }
 
   private stripBase64Header(dataUrl: string): string {
-    if (dataUrl.startsWith("data:image/jpeg;base64,")) {
-      return dataUrl.split(",")[1] || dataUrl;
-    }
-
-    const base64 = dataUrl.includes(",") ? dataUrl.split(",")[1] || "" : dataUrl;
-    return base64;
+    if (dataUrl.startsWith("data:image/jpeg;base64,")) return dataUrl.split(",")[1];
+    return dataUrl.includes(",") ? dataUrl.split(",")[1] : dataUrl;
   }
 }

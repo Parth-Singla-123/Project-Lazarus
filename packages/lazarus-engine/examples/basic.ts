@@ -20,6 +20,10 @@ async function runExample() {
         apiUrl: process.env.OLLAMA_API_URL || "http://localhost:11434/api/generate",
         model: "moondream",
       },
+      scriptId: "basic-example-login-submit",
+      projectName: "Basic Lazarus Example",
+      scriptName: "Login and Submit Example",
+      scriptFilePath: "packages/lazarus-engine/examples/basic.ts",
       supabase: {
         url: process.env.SUPABASE_URL,
         anonKey: process.env.SUPABASE_ANON_KEY,
