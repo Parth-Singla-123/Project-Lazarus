@@ -51,7 +51,7 @@ export class AICaller {
       .map(([number, selector]) => {
         const metadata = metadataMap.get(number);
         const label = metadata
-          ? [metadata.tagName, metadata.text, metadata.ariaLabel, metadata.role].filter(Boolean).join(" | ")
+          ? `Tag: <${metadata.tagName}> | Text: "${metadata.text}" | ID: "${metadata.id}" | Classes: "${metadata.className}"`
           : selector;
         return `Box ${number}: ${label}`;
       })
