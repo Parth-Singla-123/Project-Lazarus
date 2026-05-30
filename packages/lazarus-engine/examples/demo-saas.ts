@@ -109,7 +109,7 @@ async function main() {
   console.log("🚨 Attempting to click legacy delete button...");
   
   // The Broken Script
-  await lazarus.click("Delete Organization Button", ".danger-btn");
+  await lazarus.click("Delete Organization Button", "#legacy-btn-123");
 
   await page.waitForTimeout(4000);
   await browser.close();

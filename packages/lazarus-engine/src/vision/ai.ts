@@ -59,18 +59,17 @@ export class AICaller {
 
     const compressedScreenshot = this.stripBase64Header(screenshotBase64);
 
-    // THE JSON PROMPT
-    const prompt = `You are a QA automation agent.
-Target element to find: "${targetDescription}"
-
+    // THE ULTIMATE LOW-COMPUTE PROMPT
+    // THE LIMITED REASON PROMPT
+    const prompt = `Target element to find: "${targetDescription}"
 Here is the data for the red boxes in the image:
 ${candidateLines}
-
-Task: Find the box number that matches the Target element.
-You MUST respond strictly in valid JSON format matching this exact structure:
+Task: Which Box number matches the Target?
+You MUST respond strictly in valid JSON format. The "reason" MUST be 15 words or less.
+Example format:
 {
-  "reason": "1 brief sentence explaining why",
-  "boxNumber": <integer>
+  "reason": "Matches the delete text",
+  "box": 4
 }`;
 
     try {
@@ -86,11 +85,11 @@ You MUST respond strictly in valid JSON format matching this exact structure:
           prompt: prompt,
           images: [compressedScreenshot],
           stream: false,
-          format: "json", // FORCE OLLAMA TO RETURN STRICT JSON
+          format: "json", // FORCE JSON
           keep_alive: "5m",
           options: {
             temperature: 0,
-            num_predict: 60, // Enough for a short JSON string
+            num_predict: 40, // Increased to 40 tokens (plenty of room for 5 words + JSON brackets)
           },
         }),
       });
@@ -106,8 +105,10 @@ You MUST respond strictly in valid JSON format matching this exact structure:
       // SAFE JSON PARSING
       try {
         const parsed = JSON.parse(rawResponse);
-        if (parsed && typeof parsed.boxNumber === 'number') {
-           const selector = selectorMap.get(parsed.boxNumber);
+        // It might return a string "4" or integer 4. Handle both.
+        if (parsed && parsed.box !== undefined) {
+           const elementNumber = parseInt(String(parsed.box), 10);
+           const selector = selectorMap.get(elementNumber);
            if (selector) {
              console.log(`[Lazarus AI] Found element via JSON: ${targetDescription} -> ${selector}`);
              return selector;
