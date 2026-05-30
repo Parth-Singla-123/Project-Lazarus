@@ -27,7 +27,7 @@ export class AICaller {
     this.apiUrl = config?.apiUrl || process.env.OLLAMA_API_URL || "http://localhost:11434/api/generate";
     // UPGRADE: Default to LLaVA instead of moondream
     this.model = config?.model || "llava"; 
-    this.requestTimeoutMs = config?.requestTimeoutMs || 60000;
+    this.requestTimeoutMs = config?.requestTimeoutMs || 90000;
     this.allowFastMatch = config?.allowFastMatch ?? true;
   }
 
@@ -46,9 +46,8 @@ export class AICaller {
       }
     }
 
-    // 1. Build the DOM Context so the AI isn't blind
     const candidateLines = Array.from(selectorMap.entries())
-      .slice(0, 15) // Get up to 15 elements
+      .slice(0, 15)
       .map(([number, selector]) => {
         const metadata = metadataMap.get(number);
         const label = metadata
@@ -60,15 +59,19 @@ export class AICaller {
 
     const compressedScreenshot = this.stripBase64Header(screenshotBase64);
 
-    // 2. The Bulletproof Prompt (Forcing the [X] bracket format)
+    // THE JSON PROMPT
     const prompt = `You are a QA automation agent.
 Target element to find: "${targetDescription}"
 
 Here is the data for the red boxes in the image:
 ${candidateLines}
 
-Look at the image and the data above. Which Box number is the Target?
-You MUST wrap your final answer in brackets. For example, if the answer is box 4, reply ONLY with: [4]`;
+Task: Find the box number that matches the Target element.
+You MUST respond strictly in valid JSON format matching this exact structure:
+{
+  "reason": "1 brief sentence explaining why",
+  "boxNumber": <integer>
+}`;
 
     try {
       const controller = new AbortController();
@@ -83,10 +86,11 @@ You MUST wrap your final answer in brackets. For example, if the answer is box 4
           prompt: prompt,
           images: [compressedScreenshot],
           stream: false,
+          format: "json", // FORCE OLLAMA TO RETURN STRICT JSON
           keep_alive: "5m",
           options: {
             temperature: 0,
-            num_predict: 50, // Let it talk if it needs to
+            num_predict: 60, // Enough for a short JSON string
           },
         }),
       });
@@ -99,34 +103,21 @@ You MUST wrap your final answer in brackets. For example, if the answer is box 4
       const rawResponse = (data.response || "").trim();
       console.log(`[Lazarus AI] Raw response from ${this.model}: ${rawResponse}`);
 
-      // 3. SAFE EXTRACTION: Look SPECIFICALLY for a number inside brackets like [4]
-      const bracketMatch = rawResponse.match(/\[(\d+)\]/);
-      
-      if (bracketMatch && bracketMatch[1]) {
-        const elementNumber = parseInt(bracketMatch[1], 10);
-        const selector = selectorMap.get(elementNumber);
-        
-        if (selector) {
-          console.log(`[Lazarus AI] Found element: ${targetDescription} -> ${selector}`);
-          return selector;
+      // SAFE JSON PARSING
+      try {
+        const parsed = JSON.parse(rawResponse);
+        if (parsed && typeof parsed.boxNumber === 'number') {
+           const selector = selectorMap.get(parsed.boxNumber);
+           if (selector) {
+             console.log(`[Lazarus AI] Found element via JSON: ${targetDescription} -> ${selector}`);
+             return selector;
+           }
         }
+      } catch (jsonError) {
+        console.warn(`[Lazarus AI] AI did not return valid JSON. Response was: ${rawResponse}`);
       }
 
-      // If LLaVA forgot the brackets, try to find ANY valid number as a last resort
-      const fallbackNumbers = rawResponse.match(/\d+/g);
-      if (fallbackNumbers) {
-        // Reverse the array to get the LAST number it said (usually the final answer)
-        for (const numStr of fallbackNumbers.reverse()) {
-          const elementNumber = parseInt(numStr, 10);
-          const selector = selectorMap.get(elementNumber);
-          if (selector) {
-            console.log(`[Lazarus AI] Extracted fallback number ${elementNumber} -> ${selector}`);
-            return selector;
-          }
-        }
-      }
-
-      console.warn(`[Lazarus AI] AI returned invalid response. Falling back to heuristic.`);
+      console.warn(`[Lazarus AI] Falling back to heuristic.`);
       const heuristicMatch = this.findFallbackMatch(targetDescription, metadataMap);
       if (heuristicMatch) return heuristicMatch;
 

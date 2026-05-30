@@ -110,11 +110,11 @@ export class Lazarus {
         });
         
         // Try clicking with new selector
-        try {
+       try {
             await this.page.click(newSelector, { timeout: 3000 });
         } catch (retryError) {
             console.error(`[Lazarus] Healed selector ${newSelector} also failed. Aborting.`);
-            throw error; // Throw the original error
+            throw new Error(`Self-healing failed. Original target: '${fallbackSelector}'. AI suggested: '${newSelector}', but it was unclickable.`);
         }
 
 

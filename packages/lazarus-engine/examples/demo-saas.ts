@@ -48,7 +48,7 @@ async function main() {
           
           /* The Danger Zone */
           .danger-zone { border: 1px solid #7f1d1d; background: #450a0a; border-radius: 12px; padding: 24px; margin-top: 40px; }
-          .danger-btn { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; float: right; }
+          .danger-btn { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-block; }
           
           .btn-normal { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
         </style>
@@ -109,7 +109,7 @@ async function main() {
   console.log("🚨 Attempting to click legacy delete button...");
   
   // The Broken Script
-  await lazarus.click("Delete Organization Button", "#legacy-delete-org-123");
+  await lazarus.click("Delete Organization Button", ".danger-btn");
 
   await page.waitForTimeout(4000);
   await browser.close();
