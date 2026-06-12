@@ -134,7 +134,7 @@ async function main() {
     
     // HEAL NUMBER 1
     // Watch this string rewrite itself while the script is running!
-    await lazarus.click("One Way Ticket option pill", "#opt-one-way");
+    await lazarus.click("One Way Ticket option pill", "#legacy-radio-oneway");
     
     console.log("✅ [Action 1] Success. Moving to next step.");
 
@@ -145,7 +145,7 @@ async function main() {
     
     // HEAL NUMBER 2
     // Because the file didn't gain/lose newlines, AST knows exactly where this line is!
-    await lazarus.click("Search Flights button (Blue)", "#submit-flight-search-old");
+    await lazarus.click("Search Flights button", "#submit-flight-search-old");
 
     console.log("✅ [Action 2] Success.");
 
