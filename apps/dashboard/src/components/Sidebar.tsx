@@ -1,74 +1,55 @@
-import { Activity, CheckCircle2, Clock3, Loader2, ShieldCheck, AlertTriangle } from "lucide-react";
-import Badge from "./Badge";
-import StatCard from "./StatCard";
+import { ShieldCheck, LayoutDashboard, GitPullRequest, Settings, TerminalSquare } from "lucide-react";
 
-type SidebarProps = {
-  connectionState: string;
-  total: number;
-  healed: number;
-  failed: number;
-  pending: number;
-};
-
-export default function Sidebar({ connectionState, total, healed, failed, pending }: SidebarProps) {
+export default function Sidebar({ connectionState, total }: { connectionState: string; total: number }) {
   const online = connectionState === "live";
 
   return (
-    <aside className="border-b border-white/5 bg-zinc-950/82 p-6 backdrop-blur-xl lg:w-[22rem] lg:border-b-0 lg:border-r lg:border-white/5">
-      <div className="mb-8 space-y-4">
+    <aside className="w-64 border-r border-white/5 bg-[#050505] p-6 flex flex-col h-screen sticky top-0">
+      
+      {/* Brand */}
+      <div className="flex items-center gap-3 mb-10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black">
+          <ShieldCheck size={18} strokeWidth={2.5} />
+        </div>
+        <span className="font-sans text-lg font-bold tracking-tight text-white">Lazarus</span>
+      </div>
+
+      {/* Navigation */}
+      <nav className="space-y-1">
+        <NavItem icon={<LayoutDashboard size={16} />} label="Overview" active />
+        <NavItem icon={<TerminalSquare size={16} />} label="Pipelines" />
+        <NavItem icon={<GitPullRequest size={16} />} label="Approvals" badge={total} />
+        <NavItem icon={<Settings size={16} />} label="AI Settings" />
+      </nav>
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Connection Status */}
+      <div className="rounded-xl border border-white/10 bg-[#0A0A0A] p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 shadow-[0_0_0_1px_rgba(16,185,129,0.06)]">
-            <ShieldCheck size={20} />
-          </div>
+          <span className="relative flex h-3 w-3">
+            {online && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />}
+            <span className={`relative inline-flex h-3 w-3 rounded-full ${online ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          </span>
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-zinc-500">Project Lazarus</p>
-            <h1 className="font-sans text-xl font-semibold tracking-tight text-white">Observability Plane</h1>
+            <p className="text-xs font-semibold text-white">Supabase Link</p>
+            <p className="text-[10px] text-zinc-500">{online ? 'Connected to stream' : 'Connecting...'}</p>
           </div>
-        </div>
-
-        <div className="rounded-[1.5rem] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-white shadow-[0_10px_30px_rgba(16,185,129,0.08)]">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
-            </span>
-            <span className="font-medium">Realtime: {online ? "Connected" : connectionState}</span>
-          </div>
-          <p className="mt-2 text-xs uppercase tracking-[0.24em] text-emerald-200/80">
-            Listening to CI/CD Pipeline
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <StatCard
-          label="Realtime"
-          value={online ? "Connected" : connectionState}
-          tone={online ? "success" : "neutral"}
-          hint={online ? "Supabase live feed" : "Connecting to stream"}
-        />
-        <StatCard label="Total" value={String(total)} tone="info" hint="Loaded in the current session" />
-        <StatCard label="Healed" value={String(healed)} tone="success" />
-        <StatCard label="Failed" value={String(failed)} tone="danger" />
-        <StatCard label="Pending" value={String(pending)} tone="neutral" />
-      </div>
-
-      <div className="mt-8 space-y-4 rounded-[1.75rem] border border-white/5 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.08),_transparent_55%),linear-gradient(180deg,rgba(9,9,11,0.88),rgba(9,9,11,0.72))] p-4 text-sm text-zinc-300">
-        <div className="flex items-center gap-2 text-zinc-100">
-          <Clock3 size={16} className="text-emerald-400" />
-          <span className="font-medium">Live stream</span>
-        </div>
-        <p className="leading-6 text-zinc-400">
-          Healing events are loaded from Supabase and streamed into the dashboard as new rows are inserted.
-        </p>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <Badge tone="info" icon={<Activity size={12} />}>Ops view</Badge>
-          <Badge tone="neutral" icon={<Loader2 size={12} />}>Realtime aware</Badge>
-          <Badge tone="success" icon={<CheckCircle2 size={12} />}>Self-healing</Badge>
-          <Badge tone="danger" icon={<AlertTriangle size={12} />}>Failure tracing</Badge>
         </div>
       </div>
     </aside>
+  );
+}
+
+function NavItem({ icon, label, active, badge }: any) {
+  return (
+    <div className={`flex items-center justify-between cursor-pointer rounded-lg px-3 py-2 transition-colors ${active ? 'bg-white/10 text-white' : 'text-zinc-400 hover:bg-white/5 hover:text-white'}`}>
+      <div className="flex items-center gap-3">
+        {icon}
+        <span className="text-sm font-medium">{label}</span>
+      </div>
+      {badge > 0 && <span className="rounded-full bg-emerald-500/20 text-emerald-400 px-2 py-0.5 text-[10px] font-bold">{badge}</span>}
+    </div>
   );
 }

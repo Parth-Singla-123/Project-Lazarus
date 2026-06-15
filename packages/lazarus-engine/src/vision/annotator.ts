@@ -13,10 +13,6 @@ export interface AnnotationResult {
   metadataMap: Map<number, AnnotatedElement>;
 }
 
-/**
- * Annotator - Injects visual markers on page elements
- * Draws red bounding boxes with numbers around interactive elements
- */
 export class Annotator {
   private page: Page;
 
@@ -24,63 +20,84 @@ export class Annotator {
     this.page = page;
   }
 
-  /**
-   * Injects JavaScript to annotate interactive elements with numbered red boxes
-   * Returns a map of number -> CSS selector
-   */
   async annotateDOM(): Promise<AnnotationResult> {
     const annotation = await this.page.evaluate(() => {
+      
+      // CRITICAL: Only draw boxes around elements the AI can physically see
+      function isElementVisible(el: HTMLElement): boolean {
+        if (!el) return false;
+        
+        // 1. Check physical dimensions first (fastest)
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return false;
+
+        // 2. Walk up the DOM tree to check opacity/display/visibility on parents
+        let current: HTMLElement | null = el;
+        while (current && current !== document.body) {
+          const style = window.getComputedStyle(current);
+          if (
+            style.display === 'none' || 
+            style.visibility === 'hidden' || 
+            style.opacity === '0'
+          ) {
+            return false;
+          }
+          current = current.parentElement;
+        }
+        
+        return true;
+      }
+
+      const allElements = document.querySelectorAll("button, a, input, [role='button']");
+      const visibleElements = Array.from(allElements).filter(el => isElementVisible(el as HTMLElement));
+
       const overlayId = "lazarus-overlay-root";
       const existingOverlay = document.getElementById(overlayId);
-      if (existingOverlay) {
-        existingOverlay.remove();
-      }
+      if (existingOverlay) existingOverlay.remove();
 
       const overlayRoot = document.createElement("div");
       overlayRoot.id = overlayId;
-      overlayRoot.style.cssText = `
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        z-index: 10000;
-      `;
+      overlayRoot.style.cssText = `position: fixed; inset: 0; pointer-events: none; z-index: 10000;`;
       document.body.appendChild(overlayRoot);
 
-      // Helper function defined inside page context
       function generateSelector(element: HTMLElement): string {
-        // Try ID first
-        if (element.id) {
-          return `#${element.id}`;
-        }
+        if (element.id) return `#${element.id}`;
 
-        // Build a path based on classes and position
-        const classSelector = element.className
-          ?.split(" ")
-          .filter((c) => c && !c.startsWith("lazarus-"))
-          .join(".");
-
-        if (classSelector) {
-          return `.${classSelector}`;
-        }
-
-        // Fallback: build a path from parent elements
         let path: string[] = [];
-        let current = element;
+        let current: HTMLElement | null = element;
 
         while (current && current !== document.body) {
-          let selector = current.tagName.toLowerCase();
-
           if (current.id) {
-            path.unshift(`${selector}#${current.id}`);
+            path.unshift(`#${current.id}`);
             break;
           }
 
-          if (current.className) {
-            selector += `.${current.className.split(" ").join(".")}`;
+          let index = 1;
+          let sibling = current.previousElementSibling;
+          
+          // Count how many siblings of the same tag appear before this element
+          while (sibling) {
+            if (sibling.tagName === current.tagName) {
+              index++;
+            }
+            sibling = sibling.previousElementSibling;
+          }
+
+          let selector = current.tagName.toLowerCase();
+          
+          // Add the exact index to make it 100% unique
+          if (index > 1) {
+            selector += `:nth-of-type(${index})`;
+          }
+
+          // We can also append the specific classes just to make it readable in the code diff
+          const cleanClasses = current.className?.split(" ").filter(c => c && !c.startsWith("lazarus-") && !c.includes(":")).join(".");
+          if (cleanClasses && index === 1) {
+             selector += `.${cleanClasses}`;
           }
 
           path.unshift(selector);
-          current = current.parentElement!;
+          current = current.parentElement;
         }
 
         return path.join(" > ");
@@ -90,21 +107,12 @@ export class Annotator {
         return (value || "").replace(/\s+/g, " ").trim();
       }
 
-      const elements = document.querySelectorAll("button, a, input, [role='button']");
       const map: Record<number, string> = {};
-      const metadata: Record<number, {
-        selector: string;
-        tagName: string;
-        text: string;
-        ariaLabel: string;
-        role: string;
-      }> = {};
+      const metadata: Record<number, any> = {};
       
-      elements.forEach((el: any, index: number) => {
+      visibleElements.forEach((el: any, index: number) => {
         const number = index + 1;
         const element = el as HTMLElement;
-        
-        // Create a unique CSS selector for this element
         const selector = generateSelector(element);
         map[number] = selector;
         metadata[number] = {
@@ -115,40 +123,13 @@ export class Annotator {
           role: cleanText(element.getAttribute("role")),
         };
         
-        // Draw red box with number
         const rect = element.getBoundingClientRect();
         const box = document.createElement("div");
-        box.setAttribute("data-lazarus-overlay", "box");
-        box.style.cssText = `
-          position: fixed;
-          border: 3px solid red;
-          border-radius: 4px;
-          pointer-events: none;
-          z-index: 10000;
-          left: ${rect.left}px;
-          top: ${rect.top}px;
-          width: ${rect.width}px;
-          height: ${rect.height}px;
-        `;
+        box.style.cssText = `position: fixed; border: 3px solid red; border-radius: 4px; pointer-events: none; z-index: 10000; left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px; height: ${rect.height}px;`;
         
         const label = document.createElement("span");
-        const descriptiveText = metadata[number].text || metadata[number].ariaLabel || metadata[number].tagName;
-        label.textContent = `[${number}] ${descriptiveText}`;
-        label.setAttribute("data-lazarus-overlay", "label");
-        label.style.cssText = `
-          position: fixed;
-          left: ${rect.left + 5}px;
-          top: ${rect.top + 5}px;
-          background: #fbbf24; /* Bright Yellow */
-          color: black;        /* Black text for contrast */
-          padding: 4px 8px;
-          border: 2px solid red;
-          border-radius: 4px;
-          font-size: 16px;     /* Larger font */
-          font-weight: 900;
-          z-index: 10001;
-          pointer-events: none;
-        `;
+        label.textContent = `[${number}]`;
+        label.style.cssText = `position: fixed; left: ${rect.left + 5}px; top: ${rect.top + 5}px; background: #fbbf24; color: black; padding: 4px 8px; border: 2px solid red; border-radius: 4px; font-size: 16px; font-weight: 900; z-index: 10001; pointer-events: none;`;
         
         overlayRoot.appendChild(box);
         overlayRoot.appendChild(label);
@@ -159,9 +140,7 @@ export class Annotator {
 
     return {
       selectorMap: new Map(Object.entries(annotation.map).map(([k, v]) => [parseInt(k), v])),
-      metadataMap: new Map(
-        Object.entries(annotation.metadata).map(([k, v]) => [parseInt(k), v])
-      ),
+      metadataMap: new Map(Object.entries(annotation.metadata).map(([k, v]) => [parseInt(k), v])),
     };
   }
 }

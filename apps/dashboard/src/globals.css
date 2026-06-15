@@ -2,24 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  color-scheme: dark;
+@layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+  }
+
+  /* Custom Scrollbar to match the dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
 }
 
-* {
-  @apply border-border;
-}
-
-body {
-  @apply bg-background text-foreground;
-  font-family: var(--font-space-grotesk), system-ui, sans-serif;
-}
-
-code, pre {
-  font-family: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-::selection {
-  background: rgba(16, 185, 129, 0.28);
-  color: white;
+@layer utilities {
+  /* Utility class to hide scrollbars but keep functionality if needed */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

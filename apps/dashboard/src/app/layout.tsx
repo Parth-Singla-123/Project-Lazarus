@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "../globals.css";
 
-const spaceGrotesk = Space_Grotesk({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-space-grotesk",
+  variable: "--font-inter",
 });
 
 const plexMono = IBM_Plex_Mono({
@@ -14,8 +14,8 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lazarus Dashboard",
-  description: "Self-healing UI automation and testing framework",
+  title: "Lazarus | Observability",
+  description: "Autonomous E2E Self-Healing Framework",
 };
 
 export default function RootLayout({
@@ -24,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${spaceGrotesk.variable} ${plexMono.variable} bg-zinc-950 text-white antialiased`}>
+    <html lang="en" className="dark">
+      <body className={`${inter.variable} ${plexMono.variable} bg-black text-white antialiased min-h-screen selection:bg-emerald-500/30 selection:text-emerald-200`}>
         {children}
       </body>
     </html>

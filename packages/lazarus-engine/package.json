@@ -14,7 +14,8 @@
     "example:e2e": "ts-node -P tsconfig.e2e.json examples/e2e-demo.ts",
     "example:ecommerce": "ts-node -P tsconfig.e2e.json examples/demo-ecommerce.ts",
     "example:saas": "ts-node -P tsconfig.e2e.json examples/demo-saas.ts",
-    "example:travel": "ts-node -P tsconfig.e2e.json examples/demo-travel.ts"
+    "example:travel": "ts-node -P tsconfig.e2e.json examples/demo-travel.ts",
+    "example:stripe": "ts-node -P tsconfig.e2e.json examples/demo-stripe-clone.ts"
   },
   "dependencies": {
     "playwright": "^1.40.0",

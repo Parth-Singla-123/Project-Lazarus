@@ -1,218 +1,95 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpRight, CheckCircle2, Filter, Loader2, Search, ShieldAlert } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import Badge from "./Badge";
-import { cn } from "../lib/cn";
+import { Search, Terminal, AlertCircle, CheckCircle2 } from "lucide-react";
 import type { HealingEvent } from "../lib/supabase";
 
-type LiveFeedProps = {
+export default function LiveFeed({
+  events,
+  query,
+  onQueryChange,
+  onSelect,
+}: {
   events: HealingEvent[];
-  totalCount: number;
   query: string;
-  onQueryChange: (value: string) => void;
-  onSelect: (event: HealingEvent) => void;
-  loading?: boolean;
-};
-
-function formatRelativeTime(value?: string | null): string {
-  if (!value) return "just now";
-
-  const diffMs = Date.now() - new Date(value).getTime();
-  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-  if (diffMinutes < 1) return "just now";
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
-
-function statusTone(status?: string | null) {
-  const normalized = (status || "").toUpperCase();
-
-  if (normalized === "HEALED") {
-    return {
-      label: "HEALED",
-      className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-      icon: CheckCircle2,
-    };
-  }
-
-  if (normalized === "FAILED") {
-    return {
-      label: "FAILED",
-      className: "border-rose-500/30 bg-rose-500/10 text-rose-300",
-      icon: ShieldAlert,
-    };
-  }
-
-  return {
-    label: normalized || "PENDING",
-    className: "border-amber-500/30 bg-amber-500/10 text-amber-200",
-    icon: Loader2,
-  };
-}
-
-function FeedSkeleton() {
+  onQueryChange: (val: string) => void;
+  onSelect: (ev: HealingEvent) => void;
+}) {
   return (
-    <div className="space-y-4 p-5 sm:p-6">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <div key={index} className="rounded-[1.4rem] border border-white/5 bg-zinc-950/60 p-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="space-y-3">
-              <div className="h-3 w-24 rounded-full bg-zinc-800/80" />
-              <div className="h-5 w-72 rounded-full bg-zinc-800/70" />
-              <div className="h-3 w-52 rounded-full bg-zinc-800/60" />
-            </div>
-            <div className="h-8 w-8 rounded-full bg-zinc-800/70" />
-          </div>
+    <div className="flex flex-col h-full rounded-2xl border border-white/10 bg-black shadow-xl overflow-hidden">
+      
+      {/* Header & Search */}
+      <div className="flex items-center justify-between border-b border-white/5 bg-[#0A0A0A] p-4">
+        <div className="flex items-center gap-3 text-white">
+          <Terminal size={18} className="text-zinc-400" />
+          <h3 className="font-semibold tracking-tight">Execution Feed</h3>
+          <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-zinc-300">
+            {events.length} logs
+          </span>
         </div>
-      ))}
-    </div>
-  );
-}
-
-function EmptyState({ query, hasEvents }: { query: string; hasEvents: boolean }) {
-  const title = query.trim() ? "No matching events" : hasEvents ? "Nothing to show" : "No events yet";
-  const description = query.trim()
-    ? "Try a broader search or clear the filter to reveal the feed."
-    : hasEvents
-      ? "The feed exists, but the current view has no rows to render."
-      : "Run the CI/CD pipeline and watch new healing events stream in live.";
-
-  const icons: Array<{ icon: LucideIcon; className: string }> = [
-    { icon: ShieldAlert, className: "text-rose-300" },
-    { icon: CheckCircle2, className: "text-emerald-300" },
-    { icon: ArrowUpRight, className: "text-sky-300" },
-  ];
-
-  return (
-    <div className="px-5 py-16 sm:px-6">
-      <div className="mx-auto max-w-2xl rounded-[2rem] border border-dashed border-white/10 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.08),_transparent_45%),linear-gradient(180deg,rgba(9,9,11,0.88),rgba(9,9,11,0.72))] p-8 text-center shadow-[0_24px_90px_rgba(0,0,0,0.3)]">
-        <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-white/5 bg-zinc-900/80 px-4 py-2">
-          {icons.map(({ icon: Icon, className }, index) => (
-            <div key={index} className={cn("flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5", className)}>
-              <Icon size={14} />
-            </div>
-          ))}
-        </div>
-
-        <h4 className="mt-6 text-2xl font-semibold tracking-tight text-white">{title}</h4>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-400">{description}</p>
-
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <Badge tone="success">Realtime feed</Badge>
-          <Badge tone="neutral">Searchable</Badge>
-          <Badge tone="info">Supabase inserts</Badge>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function LiveFeed({ events, totalCount, query, onQueryChange, onSelect, loading = false }: LiveFeedProps) {
-  return (
-    <section className="overflow-hidden rounded-[2rem] border border-white/5 bg-zinc-950/60 shadow-[0_32px_120px_rgba(0,0,0,0.35)] backdrop-blur">
-      <div className="border-b border-white/5 px-5 py-5 sm:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.28em] text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              Live CI/CD pipeline
-            </div>
-            <div>
-              <h3 className="text-2xl font-semibold tracking-tight text-white">Event stream</h3>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                Watch healing events arrive from Supabase WebSockets, then inspect the selector change and screenshot on demand.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.22em] text-zinc-500">
-            <span className="rounded-full border border-white/5 bg-zinc-900/70 px-3 py-1">{events.length} visible</span>
-            <span className="rounded-full border border-white/5 bg-zinc-900/70 px-3 py-1">{totalCount} total</span>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-          <label className="flex items-center gap-3 rounded-2xl border border-white/5 bg-zinc-900/80 px-4 py-3 text-sm text-zinc-300 focus-within:border-emerald-500/40">
-            <Search size={16} className="shrink-0 text-zinc-500" />
-            <input
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Filter by target, script, selector, or status"
-              className="w-full bg-transparent outline-none placeholder:text-zinc-600"
-            />
-          </label>
-
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-white/5 bg-zinc-900/70 px-4 py-3 text-sm text-zinc-400">
-            <Filter size={14} />
-            <span>Playwright → AI → AST → Supabase</span>
-          </div>
+        
+        <div className="relative w-64">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <input
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Search selectors or scripts..."
+            className="w-full rounded-lg border border-white/10 bg-black py-1.5 pl-9 pr-4 text-sm text-white placeholder-zinc-600 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all"
+          />
         </div>
       </div>
 
-      {loading ? (
-        <FeedSkeleton />
-      ) : events.length === 0 ? (
-        <EmptyState query={query} hasEvents={totalCount > 0} />
-      ) : (
-        <div className="divide-y divide-white/5">
-          <AnimatePresence initial={false}>
-            {events.map((event) => {
-              const tone = statusTone(event.status);
-              const StatusIcon = tone.icon;
-
+      {/* List */}
+      <div className="flex-1 overflow-y-auto p-2 bg-[#050505]">
+        <AnimatePresence initial={false}>
+          {events.length === 0 ? (
+            <div className="p-10 text-center text-zinc-600 flex flex-col items-center">
+               <Terminal size={32} className="mb-3 opacity-20" />
+               <p>No events match your criteria.</p>
+            </div>
+          ) : (
+            events.map((event) => {
+              const healed = event.status === "HEALED";
               return (
-                <motion.button
+                <motion.div
                   key={event.id}
                   layout
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
                   onClick={() => onSelect(event)}
-                  className="group w-full overflow-hidden border-0 px-5 py-5 text-left transition-colors hover:bg-white/[0.03] sm:px-6"
+                  className="group cursor-pointer mb-2 rounded-xl border border-white/5 bg-[#0A0A0A] p-4 hover:bg-white/[0.03] hover:border-white/10 transition-all"
                 >
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge tone={event.status === "HEALED" ? "success" : event.status === "FAILED" ? "danger" : "warning"} icon={<StatusIcon size={12} />}>
-                          {tone.label}
-                        </Badge>
-                        <span className="font-mono text-xs uppercase tracking-[0.24em] text-zinc-500">
-                          {event.script_id || "unknown script"}
-                        </span>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg border ${healed ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-rose-500/20 bg-rose-500/10'}`}>
+                        {healed ? <CheckCircle2 size={16} className="text-emerald-400" /> : <AlertCircle size={16} className="text-rose-400" />}
                       </div>
-
-                      <div className="space-y-2">
-                        <h4 className="text-base font-medium text-white transition-colors group-hover:text-emerald-300">
-                          {event.target_description || "(no description)"}
+                      <div>
+                        <h4 className="font-medium text-zinc-200 group-hover:text-white transition-colors">
+                          {event.target_description}
                         </h4>
-                        <p className="max-w-3xl font-mono text-sm text-zinc-400">
-                          {event.old_selector || "unknown selector"} <span className="text-zinc-600">→</span> {event.new_selector || "pending"}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-zinc-500">
-                          <span className="rounded-full border border-white/5 bg-zinc-900/70 px-2.5 py-1">{event.script_id || "unknown script"}</span>
-                          <span className="rounded-full border border-white/5 bg-zinc-900/70 px-2.5 py-1">{formatRelativeTime(event.created_at)}</span>
+                        <div className="mt-1 flex items-center gap-2 text-xs font-mono text-zinc-500">
+                          <span className="text-rose-400/70 line-through truncate max-w-[200px] block">{event.old_selector}</span>
+                          <span>→</span>
+                          <span className="text-emerald-400/70 truncate max-w-[200px] block">{event.new_selector}</span>
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-3 text-sm text-zinc-500 md:text-right">
-                      <ArrowUpRight size={16} className="text-zinc-600 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-zinc-300" />
+                    
+                    <div className="text-right">
+                      <span className="text-xs text-zinc-500 font-mono bg-white/5 px-2 py-1 rounded-md">
+                        {event.script_id?.split('/').pop() || 'script'}
+                      </span>
                     </div>
                   </div>
-                </motion.button>
+                </motion.div>
               );
-            })}
-          </AnimatePresence>
-        </div>
-      )}
-    </section>
+            })
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
