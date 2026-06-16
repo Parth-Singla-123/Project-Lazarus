@@ -178,7 +178,7 @@ async function main() {
 
     console.log("🚨 [Action 1] Attempting to click legacy 'Tax Report' button...");
     
-    // HEAL NUMBER 1 (Guaranteed success: Text is completely unique)
+    // HEAL NUMBER 1 
     await lazarus.click("Generate Tax Report button", "#legacy-tax-btn-999");
 
     console.log("✅ [Action 1] Success. Moving to next step.");
@@ -186,7 +186,7 @@ async function main() {
 
     console.log("🚨 [Action 2] Attempting to click legacy 'Upgrade' button...");
 
-    // HEAL NUMBER 2 (Guaranteed success: Text is completely unique)
+    // HEAL NUMBER 2
     await lazarus.click("Upgrade to Pro button", "#legacy-upgrade-link");
 
     console.log("✅ [Action 2] Success.");
