@@ -209,13 +209,6 @@ pnpm test
 pnpm tsc --noEmit
 ```
 
-## Notes
-
-- Telemetry is optional (disabled if Supabase env vars not set)
-- Screenshots are stored as Base64 in PostgreSQL (max 4MB)
-- Moondream inference runs locally, no external API required
-- All code modifications are atomic via ts-morph AST operations
-
 ---
 
 ## License
